@@ -7,12 +7,23 @@ struct Entry{I <: Integer, V <: Real}
     n::I
     k::I
     val::V
+    function Entry(n,k,val)
+        n ≥ 0 || throw(DomainError("n must be nonnegative"))
+        0 ≤ k ≤ n || throw(DomainError("k must be nonnegative and less than n"))
+        return new{typejoin(typeof(n),typeof(k)), typeof(val)}(n,k,val)
+    end
 end
 Entry(e::Entry) = Entry(e.n, e.k, e.val)
 Entry(n,k) = Entry(n,k,binomial(n,k))
+Entry(p::Pair) = Entry(first(p),last(p))
 Entry(V::Type,n,k) = Entry(n,k,V(binomial(n,k)))
 
+rownumber(e::Entry) = e.n
+rowposition(e::Entry) = e.k
+value(e::Entry) = e.val
+
 Base.:<(a::Entry, b::Entry) = a.val < b.val
+Base.isapprox(a::Entry, b::Entry) = a.n == b.n && a.k == b.k && isapprox(a.val, b.val)
 
 function Base.:+(a::Entry, b::Entry)
     isadjacent(a,b) || throw(NonAdjacentError("can't add these entries"))
@@ -62,7 +73,7 @@ end
 Row(r::Row) = Row(r.rownum, copy(r.data))
 Row(rownum) = Row(Integer, rownum, rownum+1)
 function Row(V::Type, rownum, datasize)
-    datasize > rownum || throw(ArgumentError("datasize specified is not enough to store the requested row"))
+    datasize > rownum || throw(ArgumentError("datasize specified is not enough to store the row"))
     datalength = numelements(datasize)
     arr = ones(V,datalength)
     entry = Entry(rownum,1,rownum*one(V))
@@ -89,6 +100,8 @@ function Base.getindex(r::Row, i::Int)
 end
 Base.firstindex(r::Row) = 0
 Base.lastindex(r::Row) = r.rownum
+
+Base.:(==)(a::Row, b::Row) = a.rownum == b.rownum && a.data[1:rownum+1] == b.data[1:rownum+1]
 
 isfirst(r::Row) = r.rownum == 0
 isvalid(r::Row) = r.rownum ≥ 0 && length(r.data) ≥ rownum + 1 && r.data[1:rownum+1] == Row(rownum).data
@@ -123,6 +136,7 @@ Base.lastindex(c::Column) = length(c.data)
 
 isfirst(c::Column) = c.colnum == 1
 isvalid(c::Column) = c.colnum ≥ 1 && c.data == Column(colnum, length(c.data))
+toarray(c::Column) = Entry.(c.colnum:(c.colnum+length(c.data)-1), c.colnum, c.data)
 
 function up(a::Entry)
     if isatright(a) || isfirst(a)
