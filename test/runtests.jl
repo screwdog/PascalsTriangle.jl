@@ -26,7 +26,7 @@ using Test
             @test g == h
         end
 
-        @testset "Accessers" begin
+        @testset "Accessors" begin
             a = Entry(15,6)
             @test rownumber(a) == 16
             @test rowposition(a) == 6
@@ -142,6 +142,12 @@ using Test
             @test a == b == c == d
         end
 
+        @testset "Accessors" begin
+            a = Row(5)
+            @test rownumber(a) == 5
+            @test value(a) == [1,5,10,10,5,1]
+        end
+
         @testset "Array functions" begin
             a = Row(7)
             b = Row(Float64, 7, 8)
@@ -217,6 +223,12 @@ using Test
             c = Column(Float64, 3, 4)
             c = Column(3, 4) # different data type
             @test a == b == c == d
+        end
+
+        @testset "Accessors" begin
+            a = Column(5,4)
+            @test colnumber(a) == 5
+            @test value(a) == [1, 6, 21, 56]
         end
 
         @testset "Array functions" begin

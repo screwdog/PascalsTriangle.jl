@@ -1,5 +1,25 @@
 module PascalsTriangle
 
+# Exceptions
+export OutOfBoundsError, NonAdjacentError
+
+# Types
+export Entry, Row, Column
+
+# Accessors
+export rownumber, rowposition, colnumber, value
+
+# Checks
+export isfirst, isatleft, isatright, isadjacent, isinterior
+export issubtractable, isvalid
+
+# Conversion
+export toarray
+
+# Modifiers
+export up, down, left, right, prev, next
+export up!, down!, left!, right!, prev!, next!
+
 struct OutOfBoundsError <: Exception end
 struct NonAdjacentError <: Exception end
 
@@ -64,7 +84,7 @@ numelements(rownum) = max(ceil(Integer, (rownum-3)÷2), 0)
 
 mutable struct Row{V} <: AbstractVector{V}
     rownum::Integer
-    data::Array{V,1}
+    data::Vector{V}
     function Row(rownum,data)
         rownum ≥ 0 || throw(DomainError(rownum,"rownum must be nonnegative"))
         return new{eltype(data)}(rownum,data)
@@ -83,6 +103,9 @@ function Row(V::Type, rownum, datasize)
     end
     return Row(rownum, arr)    
 end
+
+rownumber(r::Row) = r.rownum
+value(r::Row) = r.data[1:r.rownum+1]
 
 Base.axes(r::Row) = (ZeroRange(r.rownum),)
 Base.size(r::Row) = (r.rownum + 1,)
@@ -127,6 +150,9 @@ function Column(V::Type, colnum, datasize)
     return Column(colnum, arr)
 end
 Column(colnum, datasize) = Column(Integer, colnum, datasize)
+
+colnumber(c::Column) = c.colnum
+value(c::Column) = c.data
 
 Base.size(c::Column) = (length(c.data),)
 Base.IndexStyle(::Type{<:Column}) = IndexLinear()
