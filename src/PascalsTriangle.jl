@@ -72,17 +72,18 @@ struct ZeroRange <: AbstractUnitRange{Integer}
         new(max)
     end
 end
-Base.axes(z::ZeroRange) = (z,)
 Base.length(z::ZeroRange) = z.max + 1
 Base.first(z::ZeroRange) = 0
 Base.last(z::ZeroRange) = z.max
+Base.iterate(z::ZeroRange, i = 0) = i > z.max ? nothing : (i, i+1)
 function Base.getindex(z::ZeroRange, i::Integer)
-    0 ≤ i ≤ z.max || throw(BoundsError("index out of bounds"))
-    return i
+    1 ≤ i ≤ z.max+1 || throw(BoundsError("index out of bounds"))
+    return i-1
 end
-function Base.convert(::Type{AbstractUnitRange{T}}, z::ZeroRange) where T
+function Base.convert(::Type{AbstractUnitRange{T}}, z::ZeroRange) where {T}
     return 0:z.max
 end
+Base.show(io::IO, z::ZeroRange) = print(io, typeof(z).name, "(", z.max, ")")
 
 numelements(rownum) = rownum ≤ 3 ? 0 : (rownum-2)÷2
 
@@ -121,20 +122,45 @@ function value(r::Row)
 end
 
 Base.show(io::IO, r::Row) = show(io, value(r))
+function Base.sum(f, r::Row)
+    if r.rownum == 0
+        return f(1)
+    elseif r.rownum == 1
+        return 2f(1)
+    end
+    s = 2*one(eltype(r.data))
+    datalength = numelements(r.rownum)
+    if datalength > 0
+        if iseven(r.rownum)
+            s += f(r.data[datalength])
+        else
+            s += 2f(r.data[datalength])
+        end
+        for i ∈ (datalength-1):-1:1
+            s += 2f(r.data[i])
+        end
+    end
+    return s
+end
+Base.sum(r::Row) = 2^r.rownum
 Base.axes(r::Row) = (ZeroRange(r.rownum),)
+Base.axes1(r::Row) = ZeroRange(r.rownum)
+Base.LinearIndices(r::Row) = ZeroRange(r.rownum)
 Base.size(r::Row) = (r.rownum + 1,)
 Base.IndexStyle(::Type{<:Row}) = IndexLinear()
 function Base.getindex(r::Row, i::Int)
-    0 ≤ i ≤ r.rownum || throw(BoundsError("index out of bounds"))
-    index = i > r.rownum/2 ? r.rownum - i : i
+    0 ≤ i ≤ r.rownum || throw(BoundsError(r, i))
+    index = i > r.rownum÷2 ? r.rownum - i : i
     if index == 0
         return one(eltype(r.data))
     end
     if index == 1
-        return r.rownum*one(eltype(r.data))
+        return one(eltype(r.data))*r.rownum
     end
     return r.data[index-1]
 end
+Base.getindex(r::Row, ::Colon) = value(r)
+Base.getindex(r::Row, I) = [r[i] for i ∈ I]
 Base.firstindex(r::Row) = 0
 Base.lastindex(r::Row) = r.rownum
 

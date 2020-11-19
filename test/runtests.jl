@@ -118,8 +118,8 @@ using Test
         @test first(b) == 0
         @test last(b) == 5
 
-        @testset "Values $i" for i ∈ 0:5
-            @test b[i] == i
+        @testset "Values $i" for i ∈ 1:6
+            @test b[i] == i-1
         end
     end
 
@@ -154,6 +154,11 @@ using Test
         @testset "Array functions" begin
             a = Row(7)
             b = Row(Float64, 7, 8)
+            @test sum(a) == 128
+            @test sum(x -> x^2, a) == 3432
+            @test sum(b) == 128.0
+            @test sum(x -> x^2, b) == 3432.0
+
             @test axes(a) == axes(b) == (0:1:7,)
             @test size(a) == size(b) == (8,)
 
