@@ -20,7 +20,9 @@ export toarray
 export up, down, left, right, prev, next
 export up!, down!, left!, right!, prev!, next!
 
-struct OutOfBoundsError <: Exception end
+struct OutOfBoundsError <: Exception
+    msg::String
+end
 struct NonAdjacentError <: Exception end
 
 struct Entry{I <: Integer, V <: Real}
@@ -28,13 +30,12 @@ struct Entry{I <: Integer, V <: Real}
     k::I
     val::V
     function Entry(n,k,val)
-        n ≥ 0 || throw(DomainError("n must be nonnegative"))
-        0 ≤ k ≤ n || throw(DomainError("k must be nonnegative and less than n"))
-        return new{typejoin(typeof(n),typeof(k)), typeof(val)}(n,k,val)
+        0 ≤ k ≤ n || throw(ArgumentError("Entry requires 0 ≤ k ≤ n but n:$n, k:$k"))
+        return new{typeof(n), typeof(val)}(n,k,val)
     end
 end
 Entry(e::Entry) = Entry(e.n, e.k, e.val)
-Entry(n,k) = Entry(n,k,binomial(n,k))
+Entry(n,k) = Entry(n,k,binomial(n,convert(typeof(n),k)))
 Entry(p::Pair) = Entry(first(p),last(p))
 Entry(V::Type,n,k) = Entry(n,k,V(binomial(n,k)))
 
@@ -42,16 +43,17 @@ rownumber(e::Entry) = e.n
 rowposition(e::Entry) = e.k
 value(e::Entry) = e.val
 
+Base.:(==)(a::Entry, b::Entry) = a.n == b.n && a.k == b.k && a.val == b.val
 Base.:<(a::Entry, b::Entry) = a.val < b.val
 Base.isapprox(a::Entry, b::Entry) = a.n == b.n && a.k == b.k && isapprox(a.val, b.val)
 
 function Base.:+(a::Entry, b::Entry)
-    isadjacent(a,b) || throw(NonAdjacentError("can't add these entries"))
+    isadjacent(a,b) || throw(NonAdjacentError())
     return Entry(a.n+1, max(a.k, b.k), a.val + b.val)
 end
 
 function Base.:-(a::Entry, b::Entry)
-    issubtractable(a,b) || throw(NonAdjacentError("can't subtract these entries"))
+    issubtractable(a,b) || throw(NonAdjacentError())
     return Entry(b.n, 2a.k - b.k - 1, a.val - b.val)
 end
 
@@ -65,7 +67,6 @@ isvalid(a::Entry) = 0 ≤ a.n && 0 ≤ a.k ≤ a.n && binomial(a.n, a.k) == a.va
 
 struct ZeroRange <: AbstractUnitRange{Integer}
     max::Integer
-
     function ZeroRange(max)
         max ≥ 0 || throw(ArgumentError("end of range must be nonnegative"))
         new(max)
@@ -79,8 +80,11 @@ function Base.getindex(z::ZeroRange, i::Integer)
     0 ≤ i ≤ z.max || throw(BoundsError("index out of bounds"))
     return i
 end
+function Base.convert(::Type{AbstractUnitRange{T}}, z::ZeroRange) where T
+    return 0:z.max
+end
 
-numelements(rownum) = max(ceil(Integer, (rownum-3)÷2), 0)
+numelements(rownum) = rownum ≤ 3 ? 0 : (rownum-2)÷2
 
 mutable struct Row{V} <: AbstractVector{V}
     rownum::Integer
@@ -91,22 +95,32 @@ mutable struct Row{V} <: AbstractVector{V}
     end
 end
 Row(r::Row) = Row(r.rownum, copy(r.data))
-Row(rownum) = Row(Integer, rownum, rownum+1)
+Row(rownum) = Row(Integer, rownum, rownum)
 function Row(V::Type, rownum, datasize)
-    datasize > rownum || throw(ArgumentError("datasize specified is not enough to store the row"))
-    datalength = numelements(datasize)
-    arr = ones(V,datalength)
-    entry = Entry(rownum,1,rownum*one(V))
-    for i ∈ 1:datalength
-        entry = right(entry)
-        arr[i] = entry.val
+    rownum ≥ 0 || throw(DomainError(rownum,"rownum must be nonnegative"))
+    datasize ≥ rownum || throw(ArgumentError("datasize specified is not enough to store the row"))
+    arr = Vector{V}(undef, numelements(datasize))
+    datalength = numelements(rownum)
+    if datalength ≥ 1
+        entry = Entry(rownum,1,rownum*one(V))
+        for i ∈ 1:datalength
+            entry = right(entry)
+            arr[i] = entry.val
+        end
     end
     return Row(rownum, arr)    
 end
 
 rownumber(r::Row) = r.rownum
-value(r::Row) = r.data[1:r.rownum+1]
+function value(r::Row)
+    arr = ones(eltype(r.data), r.rownum+1)
+    for i ∈ 1:(r.rownum-1)
+        arr[i+1] = r[i]
+    end
+    return arr
+end
 
+Base.show(io::IO, r::Row) = show(io, value(r))
 Base.axes(r::Row) = (ZeroRange(r.rownum),)
 Base.size(r::Row) = (r.rownum + 1,)
 Base.IndexStyle(::Type{<:Row}) = IndexLinear()
@@ -124,11 +138,14 @@ end
 Base.firstindex(r::Row) = 0
 Base.lastindex(r::Row) = r.rownum
 
-Base.:(==)(a::Row, b::Row) = a.rownum == b.rownum && a.data[1:rownum+1] == b.data[1:rownum+1]
+Base.:(==)(a::Row, b::Row) = a.rownum == b.rownum &&
+    a.data[1:numelements(a.rownum)] == b.data[1:numelements(b.rownum)]
 
 isfirst(r::Row) = r.rownum == 0
-isvalid(r::Row) = r.rownum ≥ 0 && length(r.data) ≥ rownum + 1 && r.data[1:rownum+1] == Row(rownum).data
-toarray(r::Row) = map((k,v) -> Entry(r.rownum,k,v), 0:r.rownum, r.data)
+isvalid(r::Row) = r.rownum ≥ 0 &&
+    length(r.data) ≥ numelements(r.rownum) && 
+    r.data[1:numelements(r.rownum)] == Row(r.rownum).data
+toarray(r::Row) = Entry.(r.rownum,0:r.rownum,value(r))
 
 mutable struct Column{V} <: AbstractVector{V}
     colnum::Integer
@@ -138,7 +155,7 @@ mutable struct Column{V} <: AbstractVector{V}
         return new{eltype(data)}(colnum, data)
     end
 end
-Column(c::Column) = Column(c.colnum, copy(c.data))
+Column(c::Column) = Column(c.colnum, deepcopy(c.data))
 function Column(V::Type, colnum, datasize)
     datasize ≥ 0 || throw(DomainError("datasize must be nonnegative"))
     arr = ones(V,datasize)
@@ -160,22 +177,24 @@ Base.getindex(c::Column, i::Int) = c.data[i]
 Base.firstindex(c::Column) = 1
 Base.lastindex(c::Column) = length(c.data)
 
-isfirst(c::Column) = c.colnum == 1
-isvalid(c::Column) = c.colnum ≥ 1 && c.data == Column(colnum, length(c.data))
+isfirst(c::Column) = c.colnum == 0
+isvalid(c::Column) = c.colnum ≥ 0 && c.data == Column(c.colnum, length(c.data)).data
 toarray(c::Column) = Entry.(c.colnum:(c.colnum+length(c.data)-1), c.colnum, c.data)
 
 function up(a::Entry)
     if isatright(a) || isfirst(a)
         throw(OutOfBoundsError("no entry above"))
     end
-    return Entry(a.n-1, a.k, (a.n - a.k)/a.n*a.val)
+    # Need to do division last in case a.val is an integer
+    return Entry(a.n-1, a.k, a.val*(a.n - a.k)÷a.n)
 end
 
 up!(r::Row) = prev!(r)
 up(r::Row) = prev(r)
 
 function down(a::Entry)
-    Entry(a.n+1, a.k, (a.n + 1)/(a.n - a.k + 1)*a.val)
+    # Need to do division last in case a.val is an integer
+    Entry(a.n+1, a.k, a.val*(a.n + 1)÷(a.n - a.k + 1))
 end
 
 down!(r::Row) = next!(r)
@@ -190,7 +209,7 @@ left!(c::Column) = prev!(c)
 left(c::Column) = prev(c)
 
 function right(a::Entry)
-    isatright(a) && throw(OutOfBoundsError("no enrty to the right"))
+    isatright(a) && throw(OutOfBoundsError("no entry to the right"))
     return next(a)
 end
 
@@ -200,7 +219,8 @@ right(c::Column) = next(c)
 function prev(a::Entry)
     isfirst(a) && throw(OutOfBoundsError("no previous entry"))
     if !isatleft(a)
-        return Entry(a.n, a.k-1, a.k/(a.n - a.k + 1)*a.val)
+        # Need to do division last in case a.val is an integer
+        return Entry(a.n, a.k-1, a.val*a.k÷(a.n - a.k + 1))
     else
         return Entry(a.n-1, a.n-1, 1)
     end
@@ -208,11 +228,14 @@ end
 
 function prev!(r::Row)
     isfirst(r) && throw(OutOfBoundsError("no previous row"))
-    rowdata = @view r.data[1:r.rownum]
-    for i ∈ 2:r.rownum
-        rowdata[i] -= rowdata[i-1]
-    end
     r.rownum -= 1
+    datalength = numelements(r.rownum)
+    if datalength ≥ 1
+        r.data[1] -= r.rownum
+        for i ∈ 2:datalength
+            r.data[i] -= r.data[i-1]
+        end
+    end
     return r
 end
 
@@ -232,27 +255,40 @@ end
 
 function prev(c::Column)
     newcol = Column(c)
-    return prev!(c)
+    return prev!(newcol)
 end
 
 function next(a::Entry)
     if !isatright(a)
-        return Entry(a.n, a.k+1, (a.n - a.k)/(a.k + 1)*a.val)
+        # Need to do division last in case a.val is an integer
+        return Entry(a.n, a.k+1, a.val*(a.n - a.k)÷(a.k + 1))
     else
         return Entry(a.n+1, 0, 1)
     end
 end
 
 function next!(r::Row)
+    datalength = numelements(r.rownum)
+    if isodd(r.rownum) && r.rownum ≥ 3
+        if r.rownum == 3
+            newdata = 6
+        else
+            newdata = r.data[datalength]
+        end
+        if length(r.data) > datalength
+            r.data[datalength+1] = newdata
+        else
+            push!(r.data, newdata)
+        end
+        datalength += 1
+    end
+    if datalength ≥ 1
+        for i ∈ datalength:-1:2
+            r.data[i] += r.data[i-1]
+        end
+        r.data[1] += r.rownum
+    end
     r.rownum += 1
-    for i ∈ 2:r.rownum
-        r.data[i] += r.data[i-1]
-    end
-    if length(r.data) > r.rownum
-        r.data[r.rownum+1] = one(eltype(r.data))
-    else
-        push!(r.data, one(eltype(r.data)))
-    end
     return r
 end
 
@@ -271,6 +307,6 @@ end
 
 function next(c::Column)
     newcol = Column(c)
-    return next!(c)
+    return next!(newcol)
 end
 end # of module

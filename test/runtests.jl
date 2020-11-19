@@ -1,15 +1,16 @@
 using PascalsTriangle
+const PT = PascalsTriangle
 using Test
 
 @testset "PascalsTriangle.jl" begin
     @testset "Entry" begin
         @testset "Constructors" begin
-            @test_throws DomainError Entry(-5, 10)
-            @test_throws DomainError Entry(10, -5)
-            @test_throws DomainError Entry(15, 20)
+            @test_throws ArgumentError Entry(-5, 10)
+            @test_throws ArgumentError Entry(10, -5)
+            @test_throws ArgumentError Entry(15, 20)
 
-            @test_throws ErrorException Entry(2.5, 1.0, 4)
-            @test_throws ErrorException Entry(2.0, 1.5, 4)
+            @test_throws TypeError Entry(2.5, 1.0, 4)
+            @test_throws TypeError Entry(2.0, 1.5, 4)
 
             @test Entry(4,2,6) == Entry(4,2)
 
@@ -28,7 +29,7 @@ using Test
 
         @testset "Accessors" begin
             a = Entry(15,6)
-            @test rownumber(a) == 16
+            @test rownumber(a) == 15
             @test rowposition(a) == 6
             @test value(a) == 5005
         end
@@ -74,8 +75,8 @@ using Test
             @test issubtractable(f, d)
             @test issubtractable(f, e)
             @test !issubtractable(d, e)
-            @test isvalid(d)
-            @test !isvalid(Entry(15,3,0))
+            @test PT.isvalid(d)
+            @test !PT.isvalid(Entry(15,3,0))
         end
 
         @testset "Movement" begin
@@ -105,9 +106,9 @@ using Test
     end
 
     @testset "ZeroRange" begin
-        @test_throws ArgumentError ZeroRange(-1)
-        a = ZeroRange(0)
-        b = ZeroRange(5)
+        @test_throws ArgumentError PascalsTriangle.ZeroRange(-1)
+        a = PascalsTriangle.ZeroRange(0)
+        b = PascalsTriangle.ZeroRange(5)
 
         @test axes(a) == (a,)
 
@@ -132,14 +133,16 @@ using Test
             d = Row(Integer, 0, 10)
             @test a == b == c == d
 
-            b.data[2] = 4
-            @test a != b
-
             a = Row(3, [1.0,3.0,3.0,1.0])
             b = Row(a)
             c = Row(3) # different data type
             d = Row(Float64, 3, 10)
             @test a == b == c == d
+
+            a = Row(10)
+            b = Row(a)
+            b.data[2] = 4
+            @test a != b
         end
 
         @testset "Accessors" begin
@@ -151,7 +154,7 @@ using Test
         @testset "Array functions" begin
             a = Row(7)
             b = Row(Float64, 7, 8)
-            @test axes(a) == axes(b) == ([0:7],)
+            @test axes(a) == axes(b) == (0:1:7,)
             @test size(a) == size(b) == (8,)
 
             @testset "Data access $i" for i ∈ 0:7
@@ -168,14 +171,14 @@ using Test
         @testset "Checks" begin
             a = Row(0)
             b = Row(4)
-            c = Row(4, [1,4,7,4,1])
-            d = Row(4, [1.0, 4.0, 6.0, 4.0, 1.0])
+            c = Row(4, [7]) # bad data
+            d = Row(4, [6.0])
 
             @test isfirst(a)
             @test !isfirst(b)
 
-            @test isvalid(a)
-            @test !isvalid(c)
+            @test PT.isvalid(a)
+            @test !PT.isvalid(c)
 
             @test toarray(b) == toarray(d)
         end
@@ -221,7 +224,7 @@ using Test
             a = Column(3, [1.0, 4.0, 10.0, 20.0])
             b = Column(a)
             c = Column(Float64, 3, 4)
-            c = Column(3, 4) # different data type
+            d = Column(3, 4) # different data type
             @test a == b == c == d
         end
 
@@ -250,14 +253,14 @@ using Test
         @testset "Checks" begin
             a = Column(0, 5)
             b = Column(4, 5)
-            c = Column(4, [1, 5, 15, 35, 70])
+            c = Column(4, [1, 5, 15, 35, 80])
             d = Column(4, [1.0, 5.0, 15.0, 35.0, 70.0])
 
             @test isfirst(a)
             @test !isfirst(b)
 
-            @test isvalid(a)
-            @test !isvalid(c)
+            @test PT.isvalid(a)
+            @test !PT.isvalid(c)
 
             @test toarray(b) == toarray(d)
         end
