@@ -110,7 +110,7 @@ using Test
         a = PascalsTriangle.ZeroRange(0)
         b = PascalsTriangle.ZeroRange(5)
 
-        @test axes(a) == (a,)
+        @test axes(a) == (Base.OneTo(1),)
 
         @test length(a) == 1
         @test length(b) == 6
