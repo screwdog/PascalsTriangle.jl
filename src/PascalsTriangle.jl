@@ -498,6 +498,9 @@ rownumber(e::Entry) = e.n
 rowposition(e::Entry) = e.k
 value(e::Entry) = e.val
 
+Base.show(io::IO, ::MIME"text/plain", e::Entry) = print(io, "$(typeof(e).name)($(e.n), $(e.k), $(e.val))")
+Base.show(io::IO, e::Entry) = print(io, "($(e.n), $(e.k), $(e.val))")
+
 """
     ==(a::Entry, b::Entry)
 
@@ -508,11 +511,11 @@ need not match.
 Base.:(==)(a::Entry, b::Entry) = a.n == b.n && a.k == b.k && a.val == b.val
 
 """
-    <(a::Entry, b::Entry)
+    isless(a::Entry, b::Entry)
 
 Entries are ordered only by their value, ignoring their rows and row positions.
 """
-Base.:<(a::Entry, b::Entry) = a.val < b.val
+Base.isless(a::Entry, b::Entry) = a.val < b.val
 
 """
     ≈(a::Entry, b::Entry)
@@ -651,7 +654,29 @@ function value(r::Row)
 end
 Base.values(r::Row) = value(r)
 
-Base.show(io::IO, r::Row) = show(io, value(r))
+const THRESHOLD = 10
+const HALF = 4
+function tostring(r::Row)
+    v = values(r)
+    s = "<"
+    if r.rownum < THRESHOLD
+        s *= join(v, ", ") 
+    else
+        s *= join(v[1:HALF], ", ")
+        s *= ", ..., "
+        s *= join(v[end-HALF+1:end], ", ")
+    end
+    s *= ">"
+    return s
+end
+function Base.show(io::IO, ::MIME"text/plain", r::Row)
+    print(io, "$(typeof(r).name)")
+    print(io, tostring(r))
+end
+function Base.show(io::IO, r::Row)
+    print(io, tostring(r))
+end
+
 function Base.sum(f, r::Row)
     if r.rownum == 0
         return f(1)
@@ -739,7 +764,7 @@ mutable struct Column{V} <: AbstractVector{V}
         colnum ≥ 0 || throw(DomainError("colnum must be nonnegative"))
         return new{eltype(data)}(colnum, data)
     end
-end
+end 
 Column(c::Column) = Column(c.colnum, deepcopy(c.data))
 function Column(V::Type, colnum, datasize)
     datasize ≥ 0 || throw(DomainError("datasize must be nonnegative"))
