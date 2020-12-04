@@ -1,52 +1,81 @@
 # Defines various functions for "moving" around
 # Pascal's triangle.
 
-_up(a::Entry{I, <: Integer}) where {I} = Entry(a.n-1, a.k, a.val*(a.n - a.k)÷a.n)
-_up(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n-1, a.k, a.val*(a.n - a.k)/a.n)
-function up(a::Entry)
+_upval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n - a.k)÷a.n
+_upval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n - a.k)/a.n
+function up!(a::Entry)
     if isatright(a) || isfirst(a)
         throw(OutOfBoundsError("no entry above"))
     end
-    return _up(a)
+    a.val = _upval(a)
+    a.n -= 1
+    return a
 end
+
+up(a::Entry) = up!(Entry(a))
 
 up!(r::Row) = prev!(r)
 up(r::Row) = prev(r)
 
-down(a::Entry{I, <: Integer}) where {I} = Entry(a.n+1, a.k, a.val*(a.n + 1)÷(a.n - a.k + 1))
-down(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n+1, a.k, a.val*(a.n + 1)/(a.n - a.k + 1))
+_downval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n + 1)÷(a.n - a.k + 1)
+_downval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n + 1)/(a.n - a.k + 1)
+function down!(a::Entry)
+    a.val = _downval(a)
+    a.n += 1
+    return a
+end
+
+down(a::Entry) = down!(Entry(a))
 
 down!(r::Row) = next!(r)
 down(r::Row) = next(r)
 
-_left(a::Entry{I, <: Integer}) where {I} = Entry(a.n, a.k-1, a.val*a.k÷(a.n - a.k + 1))
-_left(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n, a.k-1, a.val*a.k/(a.n - a.k + 1))
-function left(a::Entry)
-    isatleft(a) && throw(OutOfBoundsError("no entry to the left"))
-    return _left(a)
+_leftval(a::Entry{I, <: Integer}) where {I} = a.val*a.k÷(a.n - a.k + 1)
+_leftval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*a.k/(a.n - a.k + 1)
+function _left!(a)
+    a.val = _leftval(a)
+    a.k -= 1
+    return a
 end
+
+function left!(a::Entry)
+    isatleft(a) && throw(OutOfBoundsError("no entry to the left"))
+    return _left!(a)
+end
+left(a::Entry) = left!(Entry(a))
 
 left!(c::Column) = prev!(c)
 left(c::Column) = prev(c)
 
-_right(a::Entry{I, <: Integer}) where {I} = Entry(a.n, a.k+1, a.val*(a.n - a.k)÷(a.k + 1))
-_right(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n, a.k+1, a.val*(a.n - a.k)/(a.k + 1))
-function right(a::Entry)
-    isatright(a) && throw(OutOfBoundsError("no entry to the right"))
-    return _right(a)
+_rightval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n - a.k)÷(a.k + 1)
+_rightval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n - a.k)/(a.k + 1)
+function _right!(a::Entry)
+    a.val = _rightval(a)
+    a.k += 1
+    return a
 end
+
+function right!(a::Entry)
+    isatright(a) && throw(OutOfBoundsError("no entry to the right"))
+    return _right!(a)
+end
+right(a::Entry) = right!(Entry(a))
 
 right!(c::Column) = next!(c)
 right(c::Column) = next(c)
 
-function prev(a::Entry)
+function prev!(a::Entry)
     isfirst(a) && throw(OutOfBoundsError("no previous entry"))
     if !isatleft(a)
-        return _left(a)
+        return _left!(a)
     else
-        return Entry(a.n-1, a.n-1, one(a.val))
+        a.n -= 1
+        a.k = a.n
+        a.val = one(a.val)
+        return a
     end
 end
+prev(a::Entry) = prev!(Entry(a))
 
 function prev!(r::Row)
     isfirst(r) && throw(OutOfBoundsError("no previous row"))
@@ -80,13 +109,17 @@ function prev(c::Column)
     return prev!(newcol)
 end
 
-function next(a::Entry)
+function next!(a::Entry)
     if !isatright(a)
-        return _right(a)
+        return _right!(a)
     else
-        return Entry(a.n+1, zero(a.k), one(a.val))
+        a.n += 1
+        a.k = zero(a.k)
+        a.val = one(a.val)
+        return a
     end
 end
+next(a::Entry) = next!(Entry(a))
 
 function next!(r::Row)
     datalength = numelements(r.rownum)

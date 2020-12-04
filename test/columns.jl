@@ -6,7 +6,7 @@
 
         a = Column(0, [1,1,1,1])
         b = Column(a)
-        c = Column(Integer, 0, 4)
+        c = Column{Integer}(0, 4)
         d = Column(0, 4)
         @test a == b == c == d
 
@@ -15,7 +15,7 @@
 
         a = Column(3, [1.0, 4.0, 10.0, 20.0])
         b = Column(a)
-        c = Column(Float64, 3, 4)
+        c = Column{Float64}(3, 4)
         d = Column(3, 4) # different data type
         @test a == b == c == d
     end
@@ -28,7 +28,7 @@
 
     @testset "Array functions" begin
         a = Column(7, 8)
-        b = Column(Float64, 7, 8)
+        b = Column{Float64}(7, 8)
         @test size(a) == size(b) == (8,)
 
         @testset "Data access $i" for i ∈ 1:8

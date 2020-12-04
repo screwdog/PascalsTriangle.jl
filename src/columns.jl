@@ -29,7 +29,7 @@ julia> Column(Float64, 2, 3)
 ```
 """
 mutable struct Column{V} <: AbstractVector{V}
-    colnum::Integer
+    colnum::Int
     data::Array{V,1}
     function Column(colnum::Integer, data::Array)
         colnum ≥ 0 || throw(DomainError("colnum must be nonnegative"))
@@ -37,17 +37,17 @@ mutable struct Column{V} <: AbstractVector{V}
     end
 end 
 Column(c::Column) = Column(c.colnum, deepcopy(c.data))
-function Column(V::Type, colnum, datasize)
+function Column{V}(colnum, datasize) where {V <: Real}
     datasize ≥ 0 || throw(DomainError("datasize must be nonnegative"))
     arr = ones(V,datasize)
     entry = Entry(colnum,colnum,one(V))
     for i ∈ 2:datasize
-        entry = down(entry)
+        down!(entry)
         arr[i] = entry.val
     end
     return Column(colnum, arr)
 end
-Column(colnum, datasize) = Column(Integer, colnum, datasize)
+Column(colnum::Integer, datasize::Integer) = Column{Int}(colnum, datasize)
 
 colnumber(c::Column) = c.colnum
 value(c::Column) = c.data

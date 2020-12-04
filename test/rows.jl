@@ -7,13 +7,13 @@
         a = Row(0, [1])
         b = Row(a)
         c = Row(0)
-        d = Row(Integer, 0, 10)
+        d = Row{Int}(0, 10)
         @test a == b == c == d
 
         a = Row(3, [1.0,3.0,3.0,1.0])
         b = Row(a)
         c = Row(3) # different data type
-        d = Row(Float64, 3, 10)
+        d = Row{Float64}(3, 10)
         @test a == b == c == d
 
         a = Row(10)
@@ -30,7 +30,7 @@
 
     @testset "Array functions" begin
         a = Row(7)
-        b = Row(Float64, 7, 8)
+        b = Row{Float64}(7, 8)
         @test sum(a) == 128
         @test sum(x -> x^2, a) == 3432
         @test sum(b) == 128.0

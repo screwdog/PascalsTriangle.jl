@@ -14,13 +14,13 @@
         a = Entry(6,5)
         b = Entry(a)
         c = Entry(6 => 5)
-        d = Entry(Integer, 6, 5)
+        d = Entry{Int, Int}(6, 5)
         e = Entry(Int32(6), Int64(5))
         f = Entry(UInt(6), Int(5))
         @test a == b == c == d == e == f
 
         g = Entry(6,5,6.0)
-        h = Entry(Float64, 6, 5)
+        h = Entry{Int, Float64}(6, 5)
         @test g == h
     end
 
@@ -33,8 +33,8 @@
 
     @testset "Comparators" begin
         a = Entry(4,1)
-        b = Entry(Float64, 4, 1)
-        c = Entry(Float64, 10, 5)
+        b = Entry{Int, Float64}(4, 1)
+        c = Entry{Int, Float64}(10, 5)
         d = Entry(12, 6)
         e = Entry(14, 7)
         @test a ≤ b < c < d < e

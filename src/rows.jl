@@ -8,7 +8,7 @@
 Represents the integer range 0:max.
 """
 struct ZeroRange <: AbstractUnitRange{Integer}
-    max::Integer
+    max::Int
     function ZeroRange(max)
         max ≥ 0 || throw(ArgumentError("end of range must be nonnegative"))
         new(max)
@@ -67,25 +67,25 @@ julia> Row(Float64, 2, 10)
 ```
 """
 mutable struct Row{V} <: AbstractVector{V}
-    rownum::Integer
+    rownum::Int
     data::Vector{V}
-    function Row(rownum,data)
+    function Row(rownum, data)
         rownum ≥ 0 || throw(DomainError(rownum,"rownum must be nonnegative"))
         return new{eltype(data)}(rownum,data)
     end
 end
 Row(r::Row) = Row(r.rownum, copy(r.data))
-Row(rownum) = Row(Integer, rownum, rownum)
-Row(V::Type, rownum) = Row(V, rownum, rownum)
-function Row(V::Type, rownum, datasize)
+Row(rownum) = Row{Int}(rownum, rownum)
+Row{V}(rownum) where {V <: Real} = Row{V}(rownum, rownum)
+function Row{V}(rownum, datasize) where {V <: Real}
     rownum ≥ 0 || throw(DomainError(rownum,"rownum must be nonnegative"))
     datasize ≥ rownum || throw(ArgumentError("datasize specified is not enough to store the row"))
     arr = Vector{V}(undef, numelements(datasize))
     datalength = numelements(rownum)
     if datalength ≥ 1
-        entry = Entry(rownum,1,rownum*one(V))
+        entry = Entry(rownum,1,V(rownum))
         for i ∈ 1:datalength
-            entry = right(entry)
+            right!(entry)
             arr[i] = entry.val
         end
     end
@@ -161,7 +161,7 @@ function Base.getindex(r::Row, i::Int)
         return one(eltype(r.data))
     end
     if index == 1
-        return one(eltype(r.data))*r.rownum
+        return eltype(r.data)(r.rownum)
     end
     return r.data[index-1]
 end

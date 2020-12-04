@@ -25,19 +25,20 @@ julia> Entry(6,2,10) # incorrect value not checked
 Entry{Int64,Int64}(6, 2, 10)
 ```
 """
-struct Entry{I <: Integer, V <: Real}
+mutable struct Entry{I <: Integer, V <: Real}
     n::I
     k::I
     val::V
-    function Entry(n,k,val)
+    function Entry{I,V}(n,k,val) where {I <: Integer, V <: Real}
         0 ≤ k ≤ n || throw(ArgumentError("Entry requires 0 ≤ k ≤ n but n:$n, k:$k"))
-        return new{typeof(n), typeof(val)}(n,k,val)
+        return new{I,V}(n,k,val)
     end
 end
+Entry(n,k,val) = Entry{typeof(n), typeof(val)}(n,k,val)
 Entry(e::Entry) = Entry(e.n, e.k, e.val)
-Entry(n,k) = Entry(n,k,binomial(n,convert(typeof(n),k)))
-Entry(p::Pair) = Entry(first(p),last(p))
-Entry(V::Type,n,k) = Entry(n,k,V(binomial(n,k)))
+Entry{I,V}(n,k) where {I <: Integer, V <: Real} = Entry{I,V}(n, k, binomial(promote(n, k)...))
+Entry(n,k) = Entry{typeof(n),Int}(n,k)
+Entry(p::Pair) = Entry(first(p), last(p))
 
 rownumber(e::Entry) = e.n
 rowposition(e::Entry) = e.k
