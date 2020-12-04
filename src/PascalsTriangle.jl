@@ -793,26 +793,26 @@ isatleft(c::Column) = isfirst(c)
 isvalid(c::Column) = c.colnum ≥ 0 && c.data == Column(c.colnum, length(c.data)).data
 toarray(c::Column) = Entry.(c.colnum:(c.colnum+length(c.data)-1), c.colnum, c.data)
 
+_up(a::Entry{I, <: Integer}) where {I} = Entry(a.n-1, a.k, a.val*(a.n - a.k)÷a.n)
+_up(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n-1, a.k, a.val*(a.n - a.k)/a.n)
 function up(a::Entry)
     if isatright(a) || isfirst(a)
         throw(OutOfBoundsError("no entry above"))
     end
-    # Need to do division last in case a.val is an integer
-    return Entry(a.n-1, a.k, a.val*(a.n - a.k)÷a.n)
+    return _up(a)
 end
 
 up!(r::Row) = prev!(r)
 up(r::Row) = prev(r)
 
-function down(a::Entry)
-    # Need to do division last in case a.val is an integer
-    Entry(a.n+1, a.k, a.val*(a.n + 1)÷(a.n - a.k + 1))
-end
+down(a::Entry{I, <: Integer}) where {I} = Entry(a.n+1, a.k, a.val*(a.n + 1)÷(a.n - a.k + 1))
+down(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n+1, a.k, a.val*(a.n + 1)/(a.n - a.k + 1))
 
 down!(r::Row) = next!(r)
 down(r::Row) = next(r)
 
-_left(a::Entry) = Entry(a.n, a.k-1, a.val*a.k÷(a.n - a.k + 1))
+_left(a::Entry{I, <: Integer}) where {I} = Entry(a.n, a.k-1, a.val*a.k÷(a.n - a.k + 1))
+_left(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n, a.k-1, a.val*a.k/(a.n - a.k + 1))
 function left(a::Entry)
     isatleft(a) && throw(OutOfBoundsError("no entry to the left"))
     return _left(a)
@@ -821,7 +821,8 @@ end
 left!(c::Column) = prev!(c)
 left(c::Column) = prev(c)
 
-_right(a::Entry) = Entry(a.n, a.k+1, a.val*(a.n - a.k)÷(a.k + 1))
+_right(a::Entry{I, <: Integer}) where {I} = Entry(a.n, a.k+1, a.val*(a.n - a.k)÷(a.k + 1))
+_right(a::Entry{I, <: AbstractFloat}) where {I} = Entry(a.n, a.k+1, a.val*(a.n - a.k)/(a.k + 1))
 function right(a::Entry)
     isatright(a) && throw(OutOfBoundsError("no entry to the right"))
     return _right(a)
@@ -836,7 +837,7 @@ function prev(a::Entry)
         # Need to do division last in case a.val is an integer
         return _left(a)
     else
-        return Entry(a.n-1, a.n-1, 1)
+        return Entry(a.n-1, a.n-1, one(a.val))
     end
 end
 
@@ -877,7 +878,7 @@ function next(a::Entry)
         # Need to do division last in case a.val is an integer
         return _right(a)
     else
-        return Entry(a.n+1, 0, 1)
+        return Entry(a.n+1, zero(a.k), one(a.val))
     end
 end
 
