@@ -39,7 +39,7 @@ numelements(rownum) = rownum ≤ 3 ? 0 : (rownum-2)÷2
 """
     Row(rownum, data)
     Row(rownum)
-    Row(V::Type, rownum, datasize)
+    Row{V}(rownum, datasize)
     Row(r::Row)
 
 Represents a single row of Pascal's triangle. Supplied `data` is not checked
@@ -59,7 +59,7 @@ julia> Row(2)
  2
  1
 
-julia> Row(Float64, 2, 10)
+julia> Row{Float64}(2, 10)
 3-element Row{Float64} with indices PascalsTriangle.ZeroRange(2):
  1.0
  2.0

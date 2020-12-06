@@ -25,6 +25,7 @@ include("exceptions.jl")
 include("entries.jl")
 include("rows.jl")
 include("columns.jl")
+include("centres.jl")
 include("movement.jl")
 
 end # of module

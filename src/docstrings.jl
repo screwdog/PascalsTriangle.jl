@@ -35,8 +35,10 @@ function rowposition end
     value(e::Entry)
     value(r::Row) or values(r::Row)
     value(c::Column) or values(c::Column)
+    value(c::Centre) or values(c::Centre)
 
-Returns the value of the entry `e`, or the values of the row `r` or column `c`.
+Returns the value of the entry `e`, or the values of the row `r`, column `c`
+or a sequence of central elements `c`.
 
 # Examples
 ```jldoctest
@@ -159,11 +161,13 @@ const aresubtractable = issubtractable
     isvalid(e::Entry)
     isvalid(r::Row)
     isvalid(c::Column)
+    isvalid(c::Centre)
+    isvalid(l::LazyCentre)
 
-Returns true if the data contained in `e`, `r` or `c` represents a
-valid entry, row or column. This is useful for checking if the internal
-state has been corrupted but can be slow and is not normally necessary
-when using the methods of this package.
+Returns true if the data contained in `e`, `r`, `c` or `l` represents a
+valid entry, row, column or central elements. This is useful for checking
+if the internal state has been corrupted but can be slow and is not normally
+necessary when using the methods of this package.
 
 See [`Row`](@ref) for the internal structure of a `Row`.
 """
@@ -172,8 +176,13 @@ function isvalid end
 """
     toarray(r::Row)
     toarray(c::Column)
+    toarray(c::Centre)
+    toarray(l::LazyCentre)
 
-Returns an array of `Entry`s equivalent to the given row or column.
+Returns an array of `Entry`s equivalent to the given row, column or central
+elements. For a `LazyCentre` this will only include the elements that have
+actually been calculated (which may be more than those that have been
+explicitly requested).
 
 ```jldoctest
 julia> toarray(Row(2))
