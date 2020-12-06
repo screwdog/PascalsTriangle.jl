@@ -1,8 +1,8 @@
 # Defines various functions for "moving" around
 # Pascal's triangle.
 
-_upval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n - a.k)÷a.n
-_upval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n - a.k)/a.n
+_upval(a::Entry{<: Integer}) = a.val*(a.n - a.k)÷a.n
+_upval(a::Entry{<: AbstractFloat}) = a.val*(a.n - a.k)/a.n
 function up!(a::Entry)
     if isatright(a) || isfirst(a)
         throw(OutOfBoundsError("no entry above"))
@@ -17,8 +17,8 @@ up(a::Entry) = up!(Entry(a))
 up!(r::Row) = prev!(r)
 up(r::Row) = prev(r)
 
-_downval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n + 1)÷(a.n - a.k + 1)
-_downval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n + 1)/(a.n - a.k + 1)
+_downval(a::Entry{<: Integer}) = a.val*(a.n + 1)÷(a.n - a.k + 1)
+_downval(a::Entry{<: AbstractFloat}) = a.val*(a.n + 1)/(a.n - a.k + 1)
 function down!(a::Entry)
     a.val = _downval(a)
     a.n += 1
@@ -30,8 +30,8 @@ down(a::Entry) = down!(Entry(a))
 down!(r::Row) = next!(r)
 down(r::Row) = next(r)
 
-_leftval(a::Entry{I, <: Integer}) where {I} = a.val*a.k÷(a.n - a.k + 1)
-_leftval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*a.k/(a.n - a.k + 1)
+_leftval(a::Entry{<: Integer}) = a.val*a.k÷(a.n - a.k + 1)
+_leftval(a::Entry{<: AbstractFloat}) = a.val*a.k/(a.n - a.k + 1)
 function _left!(a)
     a.val = _leftval(a)
     a.k -= 1
@@ -47,8 +47,8 @@ left(a::Entry) = left!(Entry(a))
 left!(c::Column) = prev!(c)
 left(c::Column) = prev(c)
 
-_rightval(a::Entry{I, <: Integer}) where {I} = a.val*(a.n - a.k)÷(a.k + 1)
-_rightval(a::Entry{I, <: AbstractFloat}) where {I} = a.val*(a.n - a.k)/(a.k + 1)
+_rightval(a::Entry{<: Integer}) = a.val*(a.n - a.k)÷(a.k + 1)
+_rightval(a::Entry{<: AbstractFloat}) = a.val*(a.n - a.k)/(a.k + 1)
 function _right!(a::Entry)
     a.val = _rightval(a)
     a.k += 1

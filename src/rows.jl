@@ -77,7 +77,8 @@ end
 Row(r::Row) = Row(r.rownum, copy(r.data))
 Row(rownum) = Row{Int}(rownum, rownum)
 Row{V}(rownum) where {V <: Real} = Row{V}(rownum, rownum)
-function Row{V}(rownum, datasize) where {V <: Real}
+Row(rownum, datasize::Integer) = Row{Int}(rownum, datasize)
+function Row{V}(rownum, datasize::Integer) where {V <: Real}
     rownum ≥ 0 || throw(DomainError(rownum,"rownum must be nonnegative"))
     datasize ≥ rownum || throw(ArgumentError("datasize specified is not enough to store the row"))
     arr = Vector{V}(undef, numelements(datasize))

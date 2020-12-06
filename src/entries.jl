@@ -6,7 +6,7 @@
     Entry(n, k, val)
     Entry(n, k)
     Entry(n => k)
-    Entry(V::Type, n, k)
+    Entry{V}(n, k)
     Entry(e::Entry)
 
 Represents a single entry in Pascal's triangle. The supplied `val` is not checked for
@@ -18,26 +18,26 @@ both be integer types. The argument `V` specifies a type for the value field.
 julia> Entry(6,2)
 Entry{Int64,Int64}(6, 2, 15)
 
-julia> Entry(Float64, 6, 2)
+julia> Entry{Float64}(6, 2)
 Entry{Int64,Float64}(6, 2, 15.0)
 
 julia> Entry(6,2,10) # incorrect value not checked
 Entry{Int64,Int64}(6, 2, 10)
 ```
 """
-mutable struct Entry{I <: Integer, V <: Real}
-    n::I
-    k::I
+mutable struct Entry{V <: Real}
+    n::Int
+    k::Int
     val::V
-    function Entry{I,V}(n,k,val) where {I <: Integer, V <: Real}
+    function Entry{V}(n,k,val) where {V <: Real}
         0 ≤ k ≤ n || throw(ArgumentError("Entry requires 0 ≤ k ≤ n but n:$n, k:$k"))
-        return new{I,V}(n,k,val)
+        return new{V}(n,k,val)
     end
 end
-Entry(n,k,val) = Entry{typeof(n), typeof(val)}(n,k,val)
+Entry(n,k,val) = Entry{typeof(val)}(n,k,val)
 Entry(e::Entry) = Entry(e.n, e.k, e.val)
-Entry{I,V}(n,k) where {I <: Integer, V <: Real} = Entry{I,V}(n, k, binomial(promote(n, k)...))
-Entry(n,k) = Entry{typeof(n),Int}(n,k)
+Entry{V}(n,k) where {V <: Real} = Entry{V}(n, k, binomial(promote(n, k)...))
+Entry(n,k) = Entry{Int}(n,k)
 Entry(p::Pair) = Entry(first(p), last(p))
 
 rownumber(e::Entry) = e.n

@@ -6,21 +6,21 @@
         @test_throws ArgumentError Entry(10, -5)
         @test_throws ArgumentError Entry(15, 20)
 
-        @test_throws TypeError Entry(2.5, 1.0, 4)
-        @test_throws TypeError Entry(2.0, 1.5, 4)
+        @test_throws InexactError Entry(2.5, 1.0, 4)
+        @test_throws InexactError Entry(2.0, 1.5, 4)
 
         @test Entry(4,2,6) == Entry(4,2)
 
         a = Entry(6,5)
         b = Entry(a)
         c = Entry(6 => 5)
-        d = Entry{Int, Int}(6, 5)
+        d = Entry{Int}(6, 5)
         e = Entry(Int32(6), Int64(5))
         f = Entry(UInt(6), Int(5))
         @test a == b == c == d == e == f
 
         g = Entry(6,5,6.0)
-        h = Entry{Int, Float64}(6, 5)
+        h = Entry{Float64}(6, 5)
         @test g == h
     end
 
@@ -33,8 +33,8 @@
 
     @testset "Comparators" begin
         a = Entry(4,1)
-        b = Entry{Int, Float64}(4, 1)
-        c = Entry{Int, Float64}(10, 5)
+        b = Entry{Float64}(4, 1)
+        c = Entry{Float64}(10, 5)
         d = Entry(12, 6)
         e = Entry(14, 7)
         @test a ≤ b < c < d < e
