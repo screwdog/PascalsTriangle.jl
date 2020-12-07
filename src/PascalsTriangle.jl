@@ -5,6 +5,7 @@ export OutOfBoundsError, NonAdjacentError
 
 # Types
 export Entry, Row, Column
+export Centre, Center, LazyCentre, LazyCenter
 
 # Accessors
 export rownumber, rowposition, colnumber, value

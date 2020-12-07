@@ -8,5 +8,6 @@ using Test
     include("zerorange.jl")
     include("rows.jl")
     include("columns.jl")
+    include("centres.jl")
 
-end
+end 

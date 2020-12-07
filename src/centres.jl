@@ -9,16 +9,13 @@
 # up front.
 
 # Center and LazyCenter are accepted aliases.
-const Center = Centre
-const LazyCenter = LazyCentre
-
 """
     AbstractCentre <: AbstractVector
 
 Supertype of all types representing the central elements
 of Pascal's triangle.
 """
-abstract type AbstractCentre <: AbstractVector end
+abstract type AbstractCentre{V <: Real} <: AbstractVector{V} end
 Base.IndexStyle(::AbstractCentre) = IndexLinear()
 
 """
@@ -34,13 +31,13 @@ from row 0 and up to `maxrow`.
 
 `Center` is an alias for `Centre`.
 """
-struct Centre{V <: Real} <: AbstractCentre
+struct Centre{V <: Real} <: AbstractCentre{V}
     data::Vector{V}
 end
-Centre(c::Centre) = Centre(copy(c))
-function Centre{V}(maxrow::Integer) where {V <: Number}
+Centre(c::Centre) = Centre(copy(c.data))
+function Centre{V}(maxrow::Integer) where {V <: Real}
     maxrow ≥ 0 || throw(DomainError("maxrow must be non-negative, maxrow: $maxrow"))
-    data = ones(v, maxrow+1)
+    data = ones(V, maxrow+1)
     if maxrow ≥ 2
         e = Entry(2, 1, V(2))
         for i ∈ 3:2:maxrow-1
@@ -51,32 +48,21 @@ function Centre{V}(maxrow::Integer) where {V <: Number}
             e.k += 1
             e.val *= 2
         end
-        if isodd(maxrow)
-            down!(e)
+        if iseven(maxrow)
             data[maxrow+1] = e.val
         end
     end
     return Centre{V}(data)
 end
 Centre(maxrow::Integer) = Centre{BigInt}(maxrow)
-function Centre(c::LazyCentre)
-    data = eltype(c)[]
-    i = 0
-    while haskey(c.data, i)
-        push!(data, c.data[i])
-        i += 1
-    end
-    return Centre(data)
-end
 
 value(c::Centre) = c.data
 Base.values(c::Centre) = value(c)
 
 Base.axes(c::Centre) = (ZeroRange(length(c.data)-1),)
-Base.axes1(c::Centre) = ZeroRange(length(c.data)-1)
+Base.axes(c::Centre, d::Integer) = d == 1 ? axes(c)[1] : nothing
 Base.LinearIndices(c::Centre) = ZeroRange(length(c.data)-1)
 Base.size(c::Centre) = (length(c.data),)
-Base.IndexStyle(::Type{<:Row}) = IndexLinear()
 function Base.getindex(c::Centre, i::Int)
     0 ≤ i < length(c.data) || throw(BoundsError(c, i))
     return c.data[i+1]
@@ -87,13 +73,35 @@ Base.firstindex(c::Centre) = 0
 Base.lastindex(c::Centre) = length(c.data)-1
 function toarray(c::Centre, leftbias=true)
     rm = leftbias ? RoundDown : RoundUp
-    ns = axes1(c)
+    ns = axes(c,1)
     ks = div.(ns, 2, rm)
     return Entry.(ns, ks, c.data)
 end
 
+function tostring(c::Centre; oneline=false)
+    sep = oneline ? ", " : "\n"
+    v = values(c)
+    s = ""
+    if length(v) < THRESHOLD
+        s *= join(v, sep) 
+    else
+        s *= join(v[1:HALF], sep)
+        s *= oneline ? "…, " : " ⋮\n"
+        s *= join(v[end-HALF+1:end], sep)
+    end
+    return s
+end
+function Base.show(io::IO, ::MIME"text/plain", c::Centre)
+    print(io, "$(typeof(c).name){$(eltype(c).name)}")
+    print(io, " up to row $(length(c.data)-1)\n")
+    print(io, tostring(c))
+end
+function Base.show(io::IO, c::Centre)
+    print(io, tostring(c, oneline=true))
+end
+
 function isvalid(c::Centre)
-    ns = big(0):length(c.data)
+    ns = big(0):length(c.data)-1
     ks = ns .÷ 2
     return value(c) == binomial.(ns, ks)
 end
@@ -112,13 +120,13 @@ the values.
 
 `LazyCenter` is an alias for `LazyCentre`.
 """
-struct LazyCentre{V <: Real} <: AbstractCentre
+struct LazyCentre{V <: Real} <: AbstractCentre{V}
     data::Dict{Int,V}
 end
-LazyCentre(c::LazyCentre) = LazyCentre(copy(c))
-LazyCentre{V <: Real}() = LazyCentre{V}(Dict{Int,V}(0 => 1, 1 => 1))
+LazyCentre(c::LazyCentre) = LazyCentre(copy(c.data))
+LazyCentre{V}() where {V <: Real} = LazyCentre{V}(Dict{Int,V}(0 => 1, 1 => 1))
 LazyCentre() = LazyCentre{BigInt}()
-LazyCentre(c::Centre) = LazyCentre(axes1(c) .=> values(c))
+LazyCentre(c::Centre) = LazyCentre(Dict(axes(c,1) .=> values(c)))
 
 const PRECALC_NUMBER = 5
 function Base.getindex(c::LazyCentre, i::Int)
@@ -134,30 +142,63 @@ function Base.getindex(c::LazyCentre, i::Int)
     a = Entry(e)
     for j ∈ uprange
         up!(a)
-        isodd(a.n) && a.k -= 1
-        !haskey(c.data, j) && c.data[j] = a.val
+        if isodd(a.n)
+            a.k -= 1
+        end
+        if !haskey(c.data, j)
+            c.data[j] = a.val
+        end
     end
     downrange = (i+1):(i+PRECALC_NUMBER)
     a = Entry(e)
     for j ∈ downrange
         down!(a)
-        isodd(a.n) && a.k += 1
-        !haskey(c.data, j) && c.data[j] = a.val
+        if isodd(a.n)
+            a.k += 1
+        end
+        if !haskey(c.data, j)
+            c.data[j] = a.val
+        end
     end
     return e.val
 end
 Base.getindex(c::LazyCentre, I) = [c[i] for i ∈ I]
 Base.firstindex(c::LazyCentre) = 0
 Base.IteratorSize(::LazyCentre) = Base.IsInfinite()
-eltype(::LazyCentre{V}) where {V <: Real} = V
+Base.eltype(::LazyCentre{V}) where {V <: Real} = V
+
+Base.:(==)(a::LazyCentre, b::LazyCentre) = a.data == b.data
 
 function toarray(c::LazyCentre, leftbias=true)
     rm = leftbias ? RoundDown : RoundUp
     ns = keys(c.data)
     ks = div.(ns, 2, rm)
-    return Entry.(ns, ks, values(a))
+    return Entry.(ns, ks, values(c.data))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", c::LazyCentre)
+    print(io, "$(typeof(c).name){$(eltype(c).name)}")
+    print(io, "($(length(c.data)) elements precalculated, ")
+    print(io, "up to row $(maximum(keys(c.data))))")
+end
+function Base.show(io::IO, c::LazyCentre)
+    print(io, "$(typeof(c).name)")
+    print(io, "($(length(c.data)))")
 end
 
 function isvalid(c::LazyCentre)
     return all(p -> binomial(big(first(p)), first(p)÷2) == last(p), c.data)
 end
+
+function Centre(c::LazyCentre)
+    data = eltype(c)[]
+    i = 0
+    while haskey(c.data, i)
+        push!(data, c.data[i])
+        i += 1
+    end
+    return Centre(data)
+end
+
+const Center = Centre
+const LazyCenter = LazyCentre
