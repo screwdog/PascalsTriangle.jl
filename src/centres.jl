@@ -86,7 +86,7 @@ function tostring(c::Centre; oneline=false)
         s *= join(v, sep) 
     else
         s *= join(v[1:HALF], sep)
-        s *= oneline ? "…, " : " ⋮\n"
+        s *= oneline ? ", …, " : "\n ⋮\n"
         s *= join(v[end-HALF+1:end], sep)
     end
     return s
