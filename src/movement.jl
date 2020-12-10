@@ -46,6 +46,8 @@ left(a::Entry) = left!(Entry(a))
 
 left!(c::Column) = prev!(c)
 left(c::Column) = prev(c)
+left!(c::LazyColumn) = prev!(c)
+left(c::LazyColumn) = prev(c)
 
 _rightval(a::Entry{<: Integer}) = a.val*(a.n - a.k)÷(a.k + 1)
 _rightval(a::Entry{<: AbstractFloat}) = a.val*(a.n - a.k)/(a.k + 1)
@@ -63,6 +65,8 @@ right(a::Entry) = right!(Entry(a))
 
 right!(c::Column) = next!(c)
 right(c::Column) = next(c)
+right!(c::LazyColumn) = next!(c)
+right(c::LazyColumn) = next(c)
 
 function prev!(a::Entry)
     isfirst(a) && throw(OutOfBoundsError("no previous entry"))
@@ -106,6 +110,20 @@ end
 
 function prev(c::Column)
     newcol = Column(c)
+    return prev!(newcol)
+end
+
+function prev!(c::LazyColumn)
+    isfirst(c) && throw(OutOfBoundsError("no previous column"))
+    c.colnum -= 1
+    for (r, val) ∈ c.data
+        c.data[r] = value(up!(Entry(r + c.colnum, r - 1, val)))
+    end
+    return c
+end
+
+function prev(c::LazyColumn)
+    newcol = LazyColumn(c)
     return prev!(newcol)
 end
 
@@ -161,5 +179,31 @@ end
 
 function next(c::Column)
     newcol = Column(c)
+    return next!(newcol)
+end
+
+function _downright!(e::Entry)
+    if isatright(e)
+        e.n += 1
+        e.k += 1
+        return e
+    end
+    a = right(e)
+    e += a
+    return e
+end
+
+function next!(c::LazyColumn)
+    for (r, val) ∈ c.data
+        e = Entry(r + c.colnum - 1, c.colnum, val)
+        _downright!(e)
+        c.data[r] = value(e)
+    end
+    c.colnum += 1
+    return c
+end
+
+function next(c::LazyColumn)
+    newcol = LazyColumn(c)
     return next!(newcol)
 end

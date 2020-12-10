@@ -86,7 +86,7 @@ function tostring(c::Centre; oneline=false)
         s *= join(v, sep) 
     else
         s *= join(v[1:HALF], sep)
-        s *= oneline ? ", …, " : "\n ⋮\n"
+        s *= oneline ? ", …, " : "\n⋮\n"
         s *= join(v[end-HALF+1:end], sep)
     end
     return s
@@ -169,6 +169,12 @@ Base.eltype(::LazyCentre{V}) where {V <: Real} = V
 
 Base.:(==)(a::LazyCentre, b::LazyCentre) = a.data == b.data
 
+function isvalid(c::LazyCentre)
+    return all(c.data) do (n, val)
+        binomial(n, n÷2) == val
+    end
+end
+
 function toarray(c::LazyCentre, leftbias=true)
     rm = leftbias ? RoundDown : RoundUp
     ns = keys(c.data)
@@ -184,10 +190,6 @@ end
 function Base.show(io::IO, c::LazyCentre)
     print(io, "$(typeof(c).name)")
     print(io, "($(length(c.data)))")
-end
-
-function isvalid(c::LazyCentre)
-    return all(p -> binomial(big(first(p)), first(p)÷2) == last(p), c.data)
 end
 
 function Centre(c::LazyCentre)

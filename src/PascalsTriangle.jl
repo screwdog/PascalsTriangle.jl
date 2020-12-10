@@ -4,7 +4,7 @@ module PascalsTriangle
 export OutOfBoundsError, NonAdjacentError
 
 # Types
-export Entry, Row, Column
+export Entry, Row, Column, LazyColumn
 export Centre, Center, LazyCentre, LazyCenter
 
 # Accessors

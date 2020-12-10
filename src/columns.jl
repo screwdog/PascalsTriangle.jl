@@ -2,6 +2,11 @@
 # with the rest of this package a column is a sequence of values
 # from Pascal's triangle (n, k) where n ranges from k upwards.
 
+abstract type AbstractColumn{V} <: AbstractVector{V} end
+Base.IteratorEltype(::Type{<:AbstractColumn}) = Base.HasEltype()
+Base.IndexStyle(::Type{<:AbstractColumn}) = IndexLinear()
+isatleft(c::AbstractColumn) = isfirst(c)
+
 """
     Column(colnum, data)
     Column(colnum, datasize)
@@ -28,7 +33,7 @@ julia> Column(Float64, 2, 3)
  6.0
 ```
 """
-mutable struct Column{V} <: AbstractVector{V}
+mutable struct Column{V} <: AbstractColumn{V}
     colnum::Int
     data::Array{V,1}
     function Column(colnum::Integer, data::Array)
@@ -53,13 +58,97 @@ colnumber(c::Column) = c.colnum
 value(c::Column) = c.data
 Base.values(c::Column) = value(c)
 
-Base.size(c::Column) = (length(c.data),)
-Base.IndexStyle(::Type{<:Column}) = IndexLinear()
-Base.getindex(c::Column, i::Int) = c.data[i]
-Base.firstindex(c::Column) = 1
-Base.lastindex(c::Column) = length(c.data)
+Base.length(c::Column) = length(c.data)
+Base.size(c::Column) = (length(c),)
+Base.getindex(c::Column, i::Int) = c.data[i-c.colnum+1]
+Base.firstindex(c::Column) = c.colnum
+Base.lastindex(c::Column) = c.colnum + length(c.data) - 1
+Base.eltype(c::Column) = eltype(c.data)
+Base.axes(c::Column) = (firstindex(c):lastindex(c),)
 
 isfirst(c::Column) = c.colnum == 0
-isatleft(c::Column) = isfirst(c)
 isvalid(c::Column) = c.colnum ≥ 0 && c.data == Column(c.colnum, length(c.data)).data
-toarray(c::Column) = Entry.(c.colnum:(c.colnum+length(c.data)-1), c.colnum, c.data)
+toarray(c::Column) = Entry.(firstindex(c):lastindex(c), c.colnum, c.data)
+
+mutable struct LazyColumn{V} <: AbstractColumn{V}
+    colnum::Int
+    data::Dict{Int, V}
+    function LazyColumn(colnum::Integer, data::Dict)
+        colnum ≥ 0 || throw(DomainError("colnum must be nonnegative"))
+        return new{valtype(data)}(colnum, data)
+    end
+end 
+LazyColumn(c::LazyColumn) = LazyColumn(c.colnum, copy(c.data))
+LazyColumn(c::Column) = LazyColumn(c.colnum, 1:length(c) .=> c.data)
+LazyColumn{V}(colnum) where {V <: Real} = LazyColumn(colnum, Dict{Int,V}(1 => 1))
+LazyColumn(colnum::Integer) = LazyColumn{Int}(colnum)
+
+function Column(c::LazyColumn)
+    data = eltype(c)
+    i = c.colnum
+    while haskey(c.data, i)
+        push!(data, c.data[i])
+        i += 1
+    end
+    return Column(c.colnum, data)
+end
+
+colnumber(c::LazyColumn) = c.colnum
+function Base.getindex(c::LazyColumn, i::Int)
+    c.colnum ≤ i || throw(BoundsError(c, i))
+    c.colnum == 0 && return one(valtype(c.data))
+    j = i - c.colnum + 1
+    if haskey(c.data, j)
+        return c.data[j]
+    end
+    e = Entry{valtype(c.data)}(i, c.colnum)
+    uprange = (j-1):-1:max(1,j-PRECALC_NUMBER)
+    a = Entry(e)
+    for k ∈ uprange
+        up!(a)
+        if !haskey(c.data, k)
+            c.data[k] = a.val
+        end
+    end
+    downrange = (j+1):(j+PRECALC_NUMBER)
+    a = Entry(e)
+    for k ∈ downrange
+        down!(a)
+        if !haskey(c.data, k)
+            c.data[k] = a.val
+        end
+    end
+    return e.val
+end
+Base.getindex(c::LazyColumn, I) = [c[i] for i ∈ I]
+Base.firstindex(c::LazyColumn) = c.colnum
+Base.IteratorSize(::LazyColumn) = Base.IsInfinite()
+Base.eltype(::LazyColumn{V}) where {V <: Real} = V
+Base.keys(c::LazyColumn) = (c.colnum - 1) .+ keys(c.data)
+
+function Base.show(io::IO, ::MIME"text/plain", c::LazyColumn)
+    print(io, "$(typeof(c).name){$(valtype(c.data).name)}")
+    print(io, "($(c.colnum))\n")
+    print(io, "($(length(c.data)) elements precalculated, ")
+    print(io, "up to row $(maximum(keys(c.data))+c.colnum-1))")
+end
+function Base.show(io::IO, c::LazyColumn)
+    print(io, "$(typeof(c).name)")
+    print(io, "($(c.colnum))")
+end
+
+Base.:(==)(a::LazyColumn, b::LazyColumn) = a.colnum == b.colnum &&
+    isvalid(a) && isvalid(b)
+
+isfirst(c::LazyColumn) = c.colnum == 0
+function isvalid(c::LazyColumn)
+    c.colnum < 0 && return false
+    for (r, val) ∈ c.data
+        if binomial(big(c.colnum + r - 1), big(c.colnum)) ≠ val
+            return false
+        end
+    end
+    return true
+end
+
+toarray(c::LazyColumn) = Entry.(keys(c), c.colnum, values(c.data))
