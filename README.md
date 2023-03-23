@@ -1,3 +1,15 @@
+# Give Up GitHub
+
+This project has given up GitHub.  ([See Software Freedom Conservancy's *Give Up  GitHub* site for details](https://GiveUpGitHub.org).)
+
+I have abandoned this project as I only ever intended it as a way of learning Julia / Git / GitHub. You can find my other projects on [Codeberg](https://codeberg.org/screw_dog).
+
+Any use of this project's code by GitHub Copilot, past or present, is done without our permission.  We do not consent to GitHub's use of this project's code in Copilot.
+
+Join us; you can [give up GitHub](https://GiveUpGitHub.org) too!
+
+![Logo of the GiveUpGitHub campaign](https://sfconservancy.org/img/GiveUpGitHub.png)
+
 # PascalsTriangle
 A package for efficient calculations associated with Pascal's
 triangle. The key types introduced are `Entry`, `Row`, and `Column`
